@@ -4,6 +4,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { CONFIG_DIR_NAME, getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 
 export type AgentScope = "user" | "project" | "both";
@@ -97,17 +98,22 @@ function findNearestProjectAgentsDir(cwd: string): string | null {
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
 	const userDir = path.join(getAgentDir(), "agents");
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
+	const extensionDir = path.dirname(fileURLToPath(import.meta.url));
+	const selfAgentsDir = path.join(extensionDir, "agents");
 
 	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
 	const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
+	const selfAgents = scope === "project" ? [] : loadAgentsFromDir(selfAgentsDir, "user");
 
 	const agentMap = new Map<string, AgentConfig>();
 
 	if (scope === "both") {
 		for (const agent of userAgents) agentMap.set(agent.name, agent);
+		for (const agent of selfAgents) agentMap.set(agent.name, agent);
 		for (const agent of projectAgents) agentMap.set(agent.name, agent);
 	} else if (scope === "user") {
 		for (const agent of userAgents) agentMap.set(agent.name, agent);
+		for (const agent of selfAgents) agentMap.set(agent.name, agent);
 	} else {
 		for (const agent of projectAgents) agentMap.set(agent.name, agent);
 	}
